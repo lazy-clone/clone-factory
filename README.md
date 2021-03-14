@@ -1,4 +1,4 @@
-# Clonning Java Objects
+# Cloning Java Objects
 
 ## Why?
 
