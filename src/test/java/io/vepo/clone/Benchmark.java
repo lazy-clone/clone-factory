@@ -65,22 +65,28 @@ public class Benchmark {
                      serializationTimes.add(measureTime("Serializing", () -> deepCopyWithObjectSerializer(value)));
                  });
 
-        System.out.println("Programatically average duration: " + NUMBER_FORMAT.format(programaticallyTimes.stream()
-                                                                                                           .mapToLong(value -> value)
-                                                                                                           .average()
-                                                                                                           .getAsDouble()));
-        System.out.println("Deep average duration: " + NUMBER_FORMAT.format(deepTimes.stream()
-                                                                                     .mapToLong(value -> value)
-                                                                                     .average()
-                                                                                     .getAsDouble()));
-        System.out.println("Lazy average duration: " + NUMBER_FORMAT.format(lazyTimes.stream()
-                                                                                     .mapToLong(value -> value)
-                                                                                     .average()
-                                                                                     .getAsDouble()));
-        System.out.println("Serializing average duration: " + NUMBER_FORMAT.format(serializationTimes.stream()
-                                                                                                     .mapToLong(value -> value)
-                                                                                                     .average()
-                                                                                                     .getAsDouble()));
+        System.out.println("Programatically average duration: "
+                + NUMBER_FORMAT.format(Math.round(programaticallyTimes.stream()
+                                                                      .mapToLong(value -> value)
+                                                                      .average()
+                                                                      .getAsDouble()))
+                + "ns");
+        System.out.println("Deep average duration: " + NUMBER_FORMAT.format(Math.round(deepTimes.stream()
+                                                                                                .mapToLong(value -> value)
+                                                                                                .average()
+                                                                                                .getAsDouble()))
+                + "ns");
+        System.out.println("Lazy average duration: " + NUMBER_FORMAT.format(Math.round(lazyTimes.stream()
+                                                                                                .mapToLong(value -> value)
+                                                                                                .average()
+                                                                                                .getAsDouble()))
+                + "ns");
+        System.out.println("Serializing average duration: "
+                + NUMBER_FORMAT.format(Math.round(serializationTimes.stream()
+                                                                    .mapToLong(value -> value)
+                                                                    .average()
+                                                                    .getAsDouble()))
+                + "ns");
 
         write(programaticallyTimes, Paths.get("times-programatically.txt"));
         write(deepTimes, Paths.get("times-deep.txt"));
