@@ -2,7 +2,7 @@
 
 ## Why?
 
-In some frameworks and applications there is a huge amount of time wasted in cloning objects. Some of this objects are never changed, they can be used as immutable object. For that reason there is a demmand for Clone By Demand library.
+In some frameworks and applications, there is a huge amount of time wasted in cloning objects. Some of these objects are never changed, they can be used as an immutable object. For that reason, there is a demand for Clone By Demand library.
 
 ## Java Object Anatomy
 
@@ -15,7 +15,7 @@ There some types of Java Objects:
 
 ### Immutable
 
-The immutable is an object that cannot be changed, all fields are finals. This object don't need to be cloned. A commom Immutable object looks like:
+The immutable is an object that cannot be changed, all fields are finals. This object doesn't need to be cloned. A common Immutable object looks like this:
 
 ```java
 public class User {
@@ -189,7 +189,7 @@ public class User {
 
 ### Record
 
-A Record is non-verbose POJO. It was used before, but now the JCP accepts it as a main pattern and introduce is as new kind of entity on Java Language ([JEP 395](https://openjdk.java.net/jeps/395)).
+A Record is non-verbose POJO. It was used before, but now the JCP accepts it as the main pattern and introduce is a new kind of entity on Java Language ([JEP 395](https://openjdk.java.net/jeps/395)).
 
 ```java
 class Point {
@@ -220,19 +220,19 @@ class Point {
 }
 ```
 
-## Clonning Types
+## Cloning Types
 
-There are two basic types of clonning: shallow and deep. The Shallow Clone copies the values of an object, but do not clone the references. The Deep Clone copies the values clone the references.
+There are two basic types of cloning: shallow and deep. The Shallow Clone copies the values of an object, but do not clone the references. The Deep Clone copies the values clone the references.
 
-In this library we will build a orthogonal approach, a Lazy Clone. The Lazy Clone only create a cloned object if some value needs to be changed.
+In this library, we will build an orthogonal approach, a Lazy Clone. The Lazy Clone only create a cloned object if some value needs to be changed.
 
 # Cloning Java Values
 
 Cloning a Java Object needs attention to the type of the value.
 
-| Type | How to identify | Clonning Strategy |
+| Type | How to identify | Cloning Strategy |
 |------|-----------------|-------------------|
 | Primitive Types | Check [Class::isPrimitive](https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#isPrimitive()) | Do not clone it, use the same value. |
 | Java Lang Immutable Object | Any class of `java.lang` that represents a value. | Do not clone it, use the same value. |
-| Java Collections | Any class that can be assignable from List, Set or Map | Create a new instance and then for each value apply the Clonning Strategy for the type |
+| Java Collections | Any class that can be assignable from List, Set or Map | Create a new instance and then for each value apply the Cloning Strategy for the type |
 | Java POJO | Any class that does not match any type above | Create a Lazy Clone instance |
