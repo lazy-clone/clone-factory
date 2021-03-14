@@ -224,7 +224,7 @@ class Point {
 
 There are two basic types of cloning: shallow and deep. The Shallow Clone copies the values of an object, but do not clone the references. The Deep Clone copies the values clone the references.
 
-In this library, we will build an orthogonal approach, a Lazy Clone. The Lazy Clone only create a cloned object if some value needs to be changed.
+In this library, we will build an different approach, the Lazy Clone. The Lazy Clone execute the Shallow clone on all primitive and immutable values and for the other only clones if they are requested by getters or setters.
 
 # Cloning Java Values
 
