@@ -1,148 +1,163 @@
 package io.vepo.clone;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static net.bytebuddy.description.modifier.Visibility.PRIVATE;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import io.vepo.clone.cloners.Cloner;
+import io.vepo.clone.pojo.ClassInspector;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.description.modifier.Visibility;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
+import net.bytebuddy.implementation.FieldAccessor;
+import net.bytebuddy.implementation.Implementation;
+import net.bytebuddy.implementation.Implementation.Composable;
+import net.bytebuddy.implementation.InvocationHandlerAdapter;
+import net.bytebuddy.implementation.MethodCall;
+import net.bytebuddy.matcher.ElementMatchers;
 
 class LazyCloneFactory extends CloneFactory {
 
-    private class LazyReflectionCloner<T> extends Cloner<T> {
-        private Constructor<T> constructor;
-        private Set<Field> fields;
+    private class GetterLazyLoadInvocationHandler implements InvocationHandler {
 
-        @SuppressWarnings("unchecked")
-        private LazyReflectionCloner(Class<T> objClass) {
-            constructor = (Constructor<T>) Stream.of(objClass.getConstructors())
-                                                 .filter(c -> c.getParameterCount() == 0).findFirst()
-                                                 .orElseThrow(() -> new UnsupportedOperationException("No default constructor"));
+        private GetterLazyLoadInvocationHandler() {
+        }
 
-            fields = Stream.of(objClass.getDeclaredFields())
-                           .filter(field -> !Modifier.isFinal(field.getModifiers()))
-                           .peek(f -> f.setAccessible(true))
-                           .collect(Collectors.toSet());
+        @Override
+        public Object invoke(Object object, Method method, Object[] args) throws Throwable {
+            ProxyableObject proxy = (ProxyableObject) object;
+            Field field = ClassInspector.getFieldByGetter(method);
+            Set<Field> clonedFields = proxy.$$getClonedFields();
+            if (!clonedFields.contains(field)) {
+                field.setAccessible(true);
+                field.set(proxy, LazyCloneFactory.this.clone(field.get(proxy.$$getLazySource())));
+                clonedFields.add(field);
+            }
+            return field.get(proxy);
+        }
+
+    }
+
+    private class LazyObjectProxyCloner<T> extends ObjectCloner<T> {
+
+        private static final String FIELD_LAZY_CLONED_FIELDS = "$$_lazy_cloned_fields";
+        private static final String FIELD_LAZY_SOURCE = "$$_lazy_source";
+        private Constructor<? extends T> proxyConstructor;
+
+        private LazyObjectProxyCloner(Class<T> objectClass) {
+            try {
+                Set<Field> copyableFields = new HashSet<Field>();
+                Set<Field> clonableFields = new HashSet<Field>();
+                ClassInspector.getAllFields(objectClass).forEach(field -> {
+                    if (ClassInspector.isPrimitive(field.getType()) || ClassInspector.isImmutable(field.getType())) {
+                        copyableFields.add(field);
+                    } else {
+                        clonableFields.add(field);
+                    }
+                });
+                Class<? extends T> proxyClass = BYTE_BUDDY.subclass(objectClass)
+                                                          .implement(ProxyableObject.class)
+                                                          .defineField(FIELD_LAZY_SOURCE, objectClass, PRIVATE)
+                                                          .defineField(FIELD_LAZY_CLONED_FIELDS, Set.class, PRIVATE)
+                                                          .defineConstructor(Visibility.PUBLIC)
+                                                          .withParameter(objectClass)
+                                                          .intercept(createSetters(MethodCall.invoke(objectClass.getConstructor())
+                                                                                             .andThen(FieldAccessor.ofField(FIELD_LAZY_SOURCE)
+                                                                                                                   .setsArgumentAt(0))
+                                                                                             .andThen(FieldAccessor.ofField(FIELD_LAZY_CLONED_FIELDS)
+                                                                                                                   .setsValue(new HashSet<Field>())),
+                                                                                   copyableFields))
+                                                          .method(ElementMatchers.anyOf(clonableFields.stream()
+                                                                                                      .map(ClassInspector::getGetter)
+                                                                                                      .toArray(Method[]::new)))
+                                                          .intercept(InvocationHandlerAdapter.of(getterHandler))
+                                                          .method(ElementMatchers.anyOf(clonableFields.stream()
+                                                                                                      .map(ClassInspector::getSetter)
+                                                                                                      .toArray(Method[]::new)))
+                                                          .intercept(InvocationHandlerAdapter.of(setterHandler))
+                                                          .method(ElementMatchers.named("$$getLazySource"))
+                                                          .intercept(FieldAccessor.ofField(FIELD_LAZY_SOURCE))
+                                                          .method(ElementMatchers.anyOf("$$getClonedFields"))
+                                                          .intercept(FieldAccessor.ofField(FIELD_LAZY_CLONED_FIELDS))
+                                                          .make()
+                                                          .load(objectClass.getClassLoader(),
+                                                                ClassLoadingStrategy.Default.INJECTION)
+                                                          .getLoaded();
+
+                proxyConstructor = proxyClass.getConstructor(objectClass);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("Cannot create proxy class!", e);
+            }
+        }
+
+        private Implementation createSetters(Composable constructor, Set<Field> fields) {
+            Composable constructorExecution = constructor;
+            for (Field f : fields) {
+                constructorExecution =
+                        constructorExecution.andThen(MethodCall.invoke(ClassInspector.getSetter(f))
+                                                               .withMethodCall(MethodCall.invoke(ClassInspector.getGetter(f))
+                                                                                         .onArgument(0)));
+            }
+            return constructorExecution;
         }
 
         @Override
         public T clone(T obj) {
-            T dst;
             try {
-                dst = constructor.newInstance();
-                fields.forEach(field -> {
-                    try {
-                        field.set(dst, LazyCloneFactory.this.clone(field.get(obj)));
-                    } catch (IllegalArgumentException | IllegalAccessException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                return dst;
-            } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-                    | InvocationTargetException e) {
+                return proxyConstructor.newInstance(obj);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
         }
 
     }
 
-    private class ListCloner extends Cloner<List<?>> {
+    public interface ProxyableObject {
+        public Set<Field> $$getClonedFields();
+
+        public Object $$getLazySource();
+    }
+
+    private class SetterLazyLoadInvocationHandler implements InvocationHandler {
+
+        private SetterLazyLoadInvocationHandler() {
+        }
 
         @Override
-        public List<?> clone(List<?> obj) {
-            return obj.stream()
-                      .map(item -> LazyCloneFactory.this.clone(item))
-                      .collect(toList());
-        }
-
-    }
-
-    private class MapCloner extends Cloner<Map<?, ?>> {
-
-        @Override
-        public Map<?, ?> clone(Map<?, ?> obj) {
-
-            return obj.entrySet()
-                      .stream()
-                      .map(entry -> new KeyValue(LazyCloneFactory.this.clone(entry.getKey()),
-                                                 LazyCloneFactory.this.clone(entry.getValue())))
-                      .collect(toMap(KeyValue::key, KeyValue::value));
-        }
-
-    }
-
-    private class SetCloner extends Cloner<Set<?>> {
-
-        @Override
-        public Set<?> clone(Set<?> obj) {
-            return obj.stream()
-                      .map(item -> LazyCloneFactory.this.clone(item))
-                      .collect(toSet());
-        }
-
-    }
-
-    private static final Package LANG_PACKAGE = String.class.getPackage();
-
-    private Map<Class<?>, Cloner<?>> cloners = new HashMap<>();
-    private MapCloner mapCloner = new MapCloner();
-    private ListCloner listCloner = new ListCloner();
-    private SetCloner setCloner = new SetCloner();
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T clone(T obj) {
-        if (obj == null) {
-            return null;
-        } else if (obj instanceof Map) {
-            return (T) mapCloner.clone((Map<?, ?>) obj);
-        } else if (obj instanceof List) {
-            return (T) listCloner.clone((List<?>) obj);
-        } else if (obj instanceof Set) {
-            return (T) setCloner.clone((Set<?>) obj);
-        } else if (obj.getClass().isArray()) {
-            return cloneArray(obj);
-        } else if (obj.getClass().getPackage() == LANG_PACKAGE) {
-            return obj;
-        } else {
-            return ((Cloner<T>) cloners.computeIfAbsent(obj.getClass(),
-                                                        clz -> new LazyReflectionCloner<T>((Class<T>) clz))).clone(obj);
-        }
-
-    }
-
-    @Override
-    public <T> T[] clone(T[] obj) {
-        return cloneArray(obj);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T cloneArray(T obj) {
-        int length = Array.getLength(obj);
-        if (obj.getClass().getComponentType().getPackage() == LANG_PACKAGE) {
-            Class<?> arrayType = obj.getClass().getComponentType();
-            T copy = (T) Array.newInstance(arrayType, length);
-            System.arraycopy(obj, 0, copy, 0, length);
-            return copy;
-        } else {
-            Class<?> arrayType = obj.getClass().getComponentType();
-            T copy = (T) Array.newInstance(arrayType, length);
-            for (int i = 0; i < length; ++i) {
-                Array.set(copy, i, clone(Array.get(obj, i)));
+        public Object invoke(Object object, Method method, Object[] args) throws Throwable {
+            ProxyableObject proxy = (ProxyableObject) object;
+            Field field = ClassInspector.getFieldBySetter(method);
+            Set<Field> clonedFields = proxy.$$getClonedFields();
+            if (!clonedFields.contains(field)) {
+                field.setAccessible(true);
+                field.set(proxy, LazyCloneFactory.this.clone(field.get(proxy.$$getLazySource())));
+                clonedFields.add(field);
             }
-            return copy;
+            field.set(proxy, args[0]);
+            return null;
         }
+
+    }
+
+    private final ByteBuddy BYTE_BUDDY = new ByteBuddy();
+    private Map<Class<?>, ObjectCloner<?>> cloners = new HashMap<>();
+
+    private GetterLazyLoadInvocationHandler getterHandler = new GetterLazyLoadInvocationHandler();
+
+    private SetterLazyLoadInvocationHandler setterHandler = new SetterLazyLoadInvocationHandler();
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T> T cloneObject(T obj) {
+        return ((ObjectCloner<T>) cloners.computeIfAbsent(obj.getClass(),
+                                                          clz -> new LazyObjectProxyCloner<T>((Class<T>) clz))).clone(obj);
     }
 
 }

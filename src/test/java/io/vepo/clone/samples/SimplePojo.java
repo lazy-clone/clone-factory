@@ -1,9 +1,10 @@
 package io.vepo.clone.samples;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class SimplePojo {
-
+public class SimplePojo implements Serializable {
+    private static final long serialVersionUID = 5504748915753773316L;
     private int id;
     private String username;
 
