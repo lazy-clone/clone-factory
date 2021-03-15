@@ -189,7 +189,7 @@ public class User {
 
 ### Record
 
-A Record is non-verbose POJO. It was used before, but now the JCP accepts it as the main pattern and introduce is a new kind of entity on Java Language ([JEP 395](https://openjdk.java.net/jeps/395)).
+A Record is non-verbose POJO. It was used before, but now the JCP accepts it as the main pattern and introduce it as a new kind of entity on Java Language ([JEP 395](https://openjdk.java.net/jeps/395)).
 
 ```java
 class Point {
