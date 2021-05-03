@@ -5,10 +5,10 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>io.clone.factory</groupId>
-	<artifactId>clone-factory</artifactId>
+	<artifactId>clone-factory-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Clone Factory</name>
-	<packaging>jar</packaging>
+	<packaging>pom</packaging>
 
 	<properties>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
@@ -16,23 +16,33 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
+		<aspectj.source>1.8</aspectj.source>
 		<junit.jupiter.version>5.7.1</junit.jupiter.version>
 		<maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
 	</properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>net.bytebuddy</groupId>
-			<artifactId>byte-buddy</artifactId>
-			<version>1.10.22</version>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit.jupiter.version}</version>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>net.bytebuddy</groupId>
+				<artifactId>byte-buddy</artifactId>
+				<version>1.10.22</version>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>${junit.jupiter.version}</version>
+				<scope>test</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<modules>
+		<module>core</module>
+		<module>cdi</module>
+		<module>aspectj</module>
+		<module>benchmark</module>
+	</modules>
 
 	<build>
 		<plugins>
