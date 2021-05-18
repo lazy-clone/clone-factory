@@ -1,0 +1,8 @@
+<aspectj>
+    <aspects>
+        <aspect name="io.vepo.clone.aspectj.LazyClone"/>
+        <weaver options="-verbose -showWeaveInfo">
+            <include within="io.vepo.clone.aspectj.*"/>
+        </weaver>
+    </aspects>
+</aspectj>

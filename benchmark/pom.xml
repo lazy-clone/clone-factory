@@ -16,7 +16,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>io.clone.factory</groupId>
-			<artifactId>clone-factory</artifactId>
+			<artifactId>clone-factory-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>

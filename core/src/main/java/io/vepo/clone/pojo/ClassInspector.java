@@ -28,6 +28,14 @@ public class ClassInspector {
 				.findFirst().orElseThrow(() -> new UnsupportedOperationException("No getter for " + field.getName()));
 	}
 
+	public static Field getField(Object obj, String fieldName) {
+		try {
+			return obj.getClass().getDeclaredField(fieldName);
+		} catch (NoSuchFieldException | SecurityException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	private static String capitalize(String str) {
 		return str.substring(0, 1).toUpperCase() + str.substring(1);
 	}
