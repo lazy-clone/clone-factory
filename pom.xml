@@ -16,9 +16,11 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven.compiler.source>8</maven.compiler.source>
 		<maven.compiler.target>8</maven.compiler.target>
-		<aspectj.source>1.8</aspectj.source>
 		<junit.jupiter.version>5.7.1</junit.jupiter.version>
 		<maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
+
+		<sonar.organization>lazy-clone</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 
 	<dependencyManagement>

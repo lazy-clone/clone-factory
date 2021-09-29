@@ -13,7 +13,8 @@
 	<name>Clone Factory :: AspectJ</name>
 
 	<properties>
-		<aspectj.version>1.9.6</aspectj.version>
+		<aspectj.version>1.9.7</aspectj.version>
+		<aspectj.source>1.8</aspectj.source>
 	</properties>
 
 	<dependencies>
@@ -44,7 +45,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>aspectj-maven-plugin</artifactId>
-				<version>1.11</version>
+				<version>1.14.0</version>
 				<configuration>
 					<complianceLevel>${aspectj.source}</complianceLevel>
 					<source>${aspectj.source}</source>
