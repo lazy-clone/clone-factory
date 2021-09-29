@@ -72,7 +72,6 @@
 						-javaagent:"${settings.localRepository}"\org\aspectj\aspectjweaver\${aspectj.version}\aspectjweaver-${aspectj.version}.jar
 					</argLine>
 					<useSystemClassLoader>true</useSystemClassLoader>
-					<forkMode>always</forkMode>
 				</configuration>
 			</plugin>
 		</plugins>
